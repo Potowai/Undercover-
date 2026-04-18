@@ -602,13 +602,6 @@ export default function App() {
             <h3 className={`text-4xl font-serif font-bold mb-4 tracking-tight uppercase ${eliminatedPlayer.role === 'civil' ? 'text-stone-400' : 'text-claude-accent'}`}>
               {eliminatedPlayer.role === 'civil' ? 'Un Civil' : eliminatedPlayer.role === 'undercover' ? 'Un Undercover' : 'Mr. White'}
             </h3>
-
-            {(eliminatedPlayer.role !== 'mrwhite') && (
-              <div className="mt-8 pt-8 border-t border-stone-100">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-stone-400 block mb-2">Son mot secret</span>
-                <p className="text-2xl font-serif font-bold text-claude-text">{eliminatedPlayer.word}</p>
-              </div>
-            )}
           </div>
 
           <p className="text-stone-400 font-medium italic">
