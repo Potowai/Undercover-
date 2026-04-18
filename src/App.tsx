@@ -261,7 +261,7 @@ const WORD_PAIRS = [
 
 // --- TYPES ---
 type Role = 'civil' | 'undercover' | 'mrwhite';
-type Phase = 'accueil' | 'config' | 'distribution' | 'confirm_start' | 'jeu' | 'mrwhite_guess' | 'fin';
+type Phase = 'accueil' | 'config' | 'distribution' | 'confirm_start' | 'jeu' | 'reveal_elimination' | 'mrwhite_guess' | 'fin';
 
 interface Player {
   id: number;
@@ -304,6 +304,7 @@ export default function App() {
   const [currentWordPair, setCurrentWordPair] = useState<{ civil: string; undercover: string } | null>(null);
   const [showRules, setShowRules] = useState(false);
   const [gameWinner, setGameWinner] = useState<'civils' | 'undercovers' | 'mrwhite' | null>(null);
+  const [eliminatedPlayer, setEliminatedPlayer] = useState<Player | null>(null);
 
   useEffect(() => {
     setPlayerNames(prev => {
@@ -368,18 +369,28 @@ export default function App() {
   };
 
   const eliminatePlayer = (playerId: number) => {
+    const playerToEliminate = players.find(p => p.id === playerId);
+    if (!playerToEliminate) return;
+
     const updatedPlayers = players.map(p => 
       p.id === playerId ? { ...p, isEliminated: true } : p
     );
     setPlayers(updatedPlayers);
+    setEliminatedPlayer({ ...playerToEliminate, isEliminated: true });
+    setPhase('reveal_elimination');
+  };
 
-    const eliminatedPlayer = updatedPlayers[playerId];
-    
+  const handleAfterReveal = () => {
+    if (!eliminatedPlayer) return;
+
     if (eliminatedPlayer.role === 'mrwhite') {
       setPhase('mrwhite_guess');
     } else {
-      checkWinCondition(updatedPlayers);
+      if (!checkWinCondition(players)) {
+        setPhase('jeu');
+      }
     }
+    setEliminatedPlayer(null);
   };
 
   const verifyMrWhiteGuess = (success: boolean) => {
@@ -535,10 +546,30 @@ export default function App() {
       </div>
       <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-4">
         {players.map((p) => (
-          <motion.button key={p.id} disabled={p.isEliminated} onClick={() => eliminatePlayer(p.id)} className={`w-full flex items-center justify-between p-6 rounded-[2rem] transition-all border shadow-sm ${p.isEliminated ? 'bg-stone-50 border-stone-100 opacity-50 grayscale pointer-events-none' : 'bg-white border-claude-border hover:border-claude-accent group'}`}>
+          <motion.button 
+            key={p.id} 
+            disabled={p.isEliminated} 
+            onClick={() => eliminatePlayer(p.id)} 
+            className={`w-full flex items-center justify-between p-6 rounded-[2rem] transition-all border shadow-sm ${
+              p.isEliminated 
+              ? 'bg-stone-50 border-stone-100 opacity-80' 
+              : 'bg-white border-claude-border hover:border-claude-accent group'
+            }`}
+          >
             <div className="flex items-center space-x-5">
-              <div className="w-12 h-12 rounded-full flex items-center justify-center bg-stone-50">{p.isEliminated ? <Skull className="w-6 h-6 text-stone-300" /> : <UserCheck className="w-6 h-6 text-claude-text" />}</div>
-              <span className={`text-xl font-serif font-bold block ${p.isEliminated ? 'text-stone-400 line-through' : 'text-claude-text'}`}>{p.name}</span>
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${p.isEliminated ? 'bg-stone-200' : 'bg-stone-50'}`}>
+                {p.isEliminated ? <Skull className="w-6 h-6 text-stone-400" /> : <UserCheck className="w-6 h-6 text-claude-text" />}
+              </div>
+              <div className="text-left">
+                <span className={`text-xl font-serif font-bold block ${p.isEliminated ? 'text-stone-400' : 'text-claude-text'}`}>
+                  {p.name}
+                </span>
+                {p.isEliminated && (
+                  <span className="text-[10px] font-bold text-claude-accent uppercase tracking-[0.1em]">
+                    {p.role === 'civil' ? 'Civil' : p.role === 'undercover' ? 'Undercover' : 'Mr. White'}
+                  </span>
+                )}
+              </div>
             </div>
             {!p.isEliminated && <UserX className="w-5 h-5 text-stone-300 group-hover:text-claude-accent transition-colors" />}
           </motion.button>
@@ -547,6 +578,53 @@ export default function App() {
       <button onClick={() => setPhase('fin')} className="text-stone-400 hover:text-claude-accent flex items-center justify-center space-x-2 py-2 group"><Eye className="w-4 h-4 group-hover:scale-110" /><span className="text-[10px] uppercase font-bold tracking-widest">Voir les rôles</span></button>
     </div>
   );
+
+  const renderRevealElimination = () => {
+    if (!eliminatedPlayer) return null;
+    
+    return (
+      <div className="flex flex-col items-center justify-center p-12 space-y-12 h-full text-center bg-claude-bg">
+        <motion.div
+           initial={{ scale: 0.9, opacity: 0 }}
+           animate={{ scale: 1, opacity: 1 }}
+           className="space-y-8 w-full"
+        >
+          <div className="space-y-2">
+            <span className="text-claude-secondary text-[10px] font-bold uppercase tracking-[0.3em]">Verdict du vote</span>
+            <h2 className="text-5xl font-serif font-bold text-claude-text italic">{eliminatedPlayer.name}</h2>
+          </div>
+
+          <div className="p-12 rounded-[4rem] bg-white border border-stone-200 shadow-2xl relative overflow-hidden mx-auto max-w-sm">
+            <div className={`absolute top-0 left-0 w-full h-2 ${eliminatedPlayer.role === 'civil' ? 'bg-stone-300' : 'bg-claude-accent'}`} />
+            
+            <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-stone-400 mb-6 block">Était en réalité</span>
+            
+            <h3 className={`text-4xl font-serif font-bold mb-4 tracking-tight uppercase ${eliminatedPlayer.role === 'civil' ? 'text-stone-400' : 'text-claude-accent'}`}>
+              {eliminatedPlayer.role === 'civil' ? 'Un Civil' : eliminatedPlayer.role === 'undercover' ? 'Un Undercover' : 'Mr. White'}
+            </h3>
+
+            {(eliminatedPlayer.role !== 'mrwhite') && (
+              <div className="mt-8 pt-8 border-t border-stone-100">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-stone-400 block mb-2">Son mot secret</span>
+                <p className="text-2xl font-serif font-bold text-claude-text">{eliminatedPlayer.word}</p>
+              </div>
+            )}
+          </div>
+
+          <p className="text-stone-400 font-medium italic">
+            {eliminatedPlayer.role === 'civil' ? "Le groupe s'est trompé..." : "Bien joué ! Un infiltré en moins."}
+          </p>
+
+          <button
+            onClick={handleAfterReveal}
+            className="w-full max-w-xs bg-claude-text text-claude-bg font-bold py-6 rounded-full shadow-lg active:scale-95 transition-all text-sm uppercase tracking-widest"
+          >
+            Continuer la partie
+          </button>
+        </motion.div>
+      </div>
+    );
+  };
 
   const renderMrWhiteGuess = () => (
     <div className="flex flex-col items-center justify-center p-12 space-y-12 h-full text-center bg-claude-bg">
@@ -628,7 +706,8 @@ export default function App() {
                     <button onClick={() => setPhase('jeu')} className="bg-claude-text text-claude-bg font-bold px-16 py-6 rounded-full uppercase tracking-widest shadow-lg active:scale-95 transition-all">Débuter</button>
                  </div>
               )}
-              {phase === 'mrwhite_guess' && renderMrWhiteGuess()}
+              {phase === 'reveal_elimination' && renderRevealElimination()}
+            {phase === 'mrwhite_guess' && renderMrWhiteGuess()}
               {phase === 'fin' && renderFin()}
             </div>
           </motion.div>
