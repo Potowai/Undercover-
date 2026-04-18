@@ -1,0 +1,19 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Libre Baskerville", serif;
+  
+  --color-claude-bg: #f9f7f2;
+  --color-claude-text: #1a1a1a;
+  --color-claude-accent: #d97757;
+  --color-claude-secondary: #6b6b6b;
+  --color-claude-border: #e8e6e1;
+}
+
+@layer base {
+  body {
+    @apply bg-claude-bg text-claude-text font-sans;
+  }
+}
